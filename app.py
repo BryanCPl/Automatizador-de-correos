@@ -9,6 +9,13 @@ import time
 from dotenv import load_dotenv
 import pandas as pd
 
+pathHtml:str="template.html"
+pathHtmlExist:bool=True
+
+
+
+
+
 # Forzar la salida UTF-8 para caracteres en español
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
@@ -94,14 +101,18 @@ class AutomatizadorEmail:
             print("conexion cerrada")
 
 contenido=""
-with open("template.html", "r", encoding="utf-8") as archivo:
-    contenido = archivo.read()
+try:
+    with open("template.html", "r", encoding="utf-8") as archivo:
+        contenido = archivo.read()
+except:
+    print("La ruta del archivo no existe")
+    pathHtmlExist=False
 
 if __name__ == '__main__':
     if not EMAIL or not PASSWORD:
         raise ValueError("No se encontraron EMAIL y PASSWORD en el archivo .env")
-
-    automatizador = AutomatizadorEmail(EMAIL, PASSWORD)
-    automatizador.conectarServidor()
-    automatizador.enviarEmailMasivo('clientes.csv',contenido )
-    automatizador.cerrar_conexion()
+    if pathHtmlExist:
+        automatizador = AutomatizadorEmail(EMAIL, PASSWORD)
+        automatizador.conectarServidor()
+        automatizador.enviarEmailMasivo('clientes.csv',contenido )
+        automatizador.cerrar_conexion()
