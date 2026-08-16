@@ -8,11 +8,11 @@ import io
 import time
 from dotenv import load_dotenv
 import pandas as pd
+from html import escape
+from basedatosManager import BD
 
 pathHtml:str="template.html"
 pathHtmlExist:bool=True
-
-
 
 
 
@@ -49,50 +49,36 @@ class AutomatizadorEmail:
     def personalizarMensaje(self, plantilla, datosCliente):
         return plantilla.format(**datosCliente)
 
-    def enviarEmailMasivo(self, archivo_csv, plantilla_html):
-        try:
-            clientes = pd.read_csv(archivo_csv, encoding="utf-8")
-        except FileNotFoundError as e:
-            print(f"No se encontró el archivo CSV: {e}")
-            return
-        except Exception as e:
-            print(f"Error leyendo el archivo CSV: {e}")
-            traceback.print_exc()
-            return
+    def enviarEmailMasivo(self,basedataname, table_name, plantilla_html):
+        clientes = BD(basedataname)
+        clientes.make_table(table_name)
 
-        columnas_requeridas = {"nombre", "email", "empresa", "descuento"}
-        columnas_faltantes = columnas_requeridas - set(clientes.columns)
-        if columnas_faltantes:
-            print(f"Faltan columnas en el CSV: {sorted(columnas_faltantes)}")
-            return
 
-        for i, cliente in clientes.iterrows():
-            try:
-                email_destino = str(cliente['email']).strip()
-                if not email_destino:
-                    raise ValueError("El correo del cliente está vacío")
-
+        for i in clientes.get_the_suscribers(table_name):
+                id,name,email,empresa,descuento=i[0],i[1],i[2],i[3],i[4]
+                
                 msg = MIMEMultipart()
                 msg['From'] = self.email
-                msg['To'] = email_destino
-                msg['Subject'] = f"Hola {cliente['nombre']} te necesitamos"
+                msg['To'] = email
+                msg['Subject'] = f"Hola {name} te necesitamos"
 
                 contenido = self.personalizarMensaje(plantilla_html, {
-                    'nombre': cliente['nombre'],
-                    'empresa': cliente['empresa'],
-                    'descuento': cliente['descuento']
+                    'id': escape(str(id)),
+                    'nombre': escape(str(name)),
+                    'empresa': escape(str(empresa)),
+                    'descuento': escape(str(descuento))
                 })
 
                 msg.attach(MIMEText(contenido, 'html'))
                 assert self.server is not None
                 self.server.send_message(msg)
-                print(f"Correo enviado a {email_destino}")
+                print(f"Correo enviado a {email}")
                 time.sleep(2)
-            except Exception as e:
-                print(f"Error en el cliente {i} ({cliente.get('email', 'desconocido')}): {e}")
-                traceback.print_exc()
+        
+        
 
-    def desuscripcion(self,idUser):
+
+    def desuscripcion(self):
         pass
 
     def cerrar_conexion(self):
@@ -108,11 +94,16 @@ except:
     print("La ruta del archivo no existe")
     pathHtmlExist=False
 
+
+
 if __name__ == '__main__':
     if not EMAIL or not PASSWORD:
         raise ValueError("No se encontraron EMAIL y PASSWORD en el archivo .env")
     if pathHtmlExist:
         automatizador = AutomatizadorEmail(EMAIL, PASSWORD)
         automatizador.conectarServidor()
-        automatizador.enviarEmailMasivo('clientes.csv',contenido )
+        automatizador.enviarEmailMasivo('clientes','clientes',contenido )
         automatizador.cerrar_conexion()
+    
+
+
